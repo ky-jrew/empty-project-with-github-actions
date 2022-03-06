@@ -1,0 +1,49 @@
+# This workflow will build a Java project with Gradle
+# For more information see: https://help.github.com/actions/language-and-framework-guides/building-and-testing-java-with-gradle
+
+name: Java CI with Gradle
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+jobs:
+
+  build_and_pub:
+    runs-on: ubuntu-latest
+    env:
+      LOGIN: ${{ secrets.DOCKER_LOGIN }}
+      NAME: ${{ secrets.DOCKER_NAME }}
+    steps:
+      - uses: actions/checkout@v2
+      - name: Set up JDK 11
+        uses: actions/setup-java@v1
+        with:
+          java-version: 11
+      - name: Grant execute permission for gradlew
+        run: chmod +x gradlew
+      - name: Build with Gradle
+        run: ./gradlew build
+      - name: Login to docker.io
+        run: echo ${{ secrets.DOCKER_PWD }} | docker login -u ${{ secrets.DOCKER_LOGIN }} --password-stdin
+      - name: Build image
+        # Собираем image и называем его так как указано в hub.docker т.е. login/repository:version
+        run: docker build -t $LOGIN/$NAME:${{ github.sha }} -f Dockerfile .
+      - name: Push image to docker.io
+        # Пушим образ в registry
+        run: docker push $LOGIN/$NAME:${{ github.sha }}
+      - name: Push to server
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.SERVER_IP }}
+          username: ${{ secrets.SERVER_USERNAME }}
+          password: ${{ secrets.SERVER_PASSWORD }}
+          script: |
+            docker stop $(echo ${{ secrets.DOCKER_NAME }})
+            docker rm $(echo ${{ secrets.DOCKER_NAME }})
+            echo ${{ secrets.DOCKER_PWD }} | docker login -u ${{ secrets.DOCKER_LOGIN }} -p ${{ secrets.DOCKER_PWD }}
+            docker run --name=${{ secrets.DOCKER_NAME }} --network=host -d -p 8080:8080 ${{ secrets.DOCKER_LOGIN }}/${{ secrets.DOCKER_NAME }}:${{ github.sha }}
+
+

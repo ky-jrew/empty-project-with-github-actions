@@ -1,0 +1,1 @@
+Empty project. Example for cicd with vps and docker
