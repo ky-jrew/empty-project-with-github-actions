@@ -39,7 +39,7 @@ jobs:
         with:
           host: ${{ secrets.SERVER_IP }}
           username: ${{ secrets.SERVER_USERNAME }}
-          password: ${{ secrets.SERVER_PASSWORD }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
             docker stop $(echo ${{ secrets.DOCKER_NAME }})
             docker rm $(echo ${{ secrets.DOCKER_NAME }})
